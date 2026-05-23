@@ -495,6 +495,18 @@ export const ProviderRouteSchema = z.object({
    */
   apiKeyEnv: z.string().optional(),
   baseUrl: z.string().optional(),
+  /**
+   * Set by the auto-probe layer when this route was synthesized from a
+   * runtime detection event. Pure metadata: not consumed by route matching
+   * or provider instantiation. Used by `skvm config probes list/clear` and
+   * `skvm config show` to display the `(auto-discovered)` marker.
+   */
+  discoveredAt: z.string().datetime().optional(),
+  /**
+   * The user route this discovery descended from (e.g. "cheap_ipads/*"
+   * when a literal route for cheap_ipads/glm-5-thinking is written).
+   */
+  discoveredFrom: z.string().optional(),
 }).refine(
   r => r.apiKey !== undefined || r.apiKeyEnv !== undefined,
   { message: "route requires either apiKey or apiKeyEnv" },

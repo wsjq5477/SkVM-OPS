@@ -159,6 +159,54 @@ describe("OpenAICompatibleProvider.complete", () => {
     })
     expect(provider.name).toBe("openai-compatible(localhost)")
   })
+
+  test("throws ToolArgumentsParseError when tool_call arguments are not JSON", async () => {
+    stubFetch({
+      id: "chatcmpl-bad",
+      object: "chat.completion",
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: "assistant",
+            content: "",
+            tool_calls: [
+              {
+                id: "call_1",
+                type: "function",
+                function: {
+                  name: "extract_fields",
+                  arguments: "<think>thinking…</think>{\"name\":\"x\"}",
+                },
+              },
+            ],
+          },
+          finish_reason: "tool_calls",
+        },
+      ],
+      usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+    })
+    const provider = new OpenAICompatibleProvider({
+      apiKey: "fake",
+      model: "test",
+      baseUrl: "https://api.example.com/v1",
+    })
+
+    let thrown: unknown
+    try {
+      await provider.complete({
+        messages: [{ role: "user", content: "extract" }],
+        tools: [{ name: "extract_fields", description: "", inputSchema: {} }],
+      })
+    } catch (e) {
+      thrown = e
+    }
+
+    const { ToolArgumentsParseError } = await import("../../src/providers/errors.ts")
+    expect(thrown).toBeInstanceOf(ToolArgumentsParseError)
+    expect((thrown as InstanceType<typeof ToolArgumentsParseError>).rawArguments)
+      .toBe("<think>thinking…</think>{\"name\":\"x\"}")
+  })
 })
 
 describe("OpenAICompatibleProvider error classification", () => {

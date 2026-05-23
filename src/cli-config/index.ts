@@ -20,6 +20,7 @@ import { checkbox, confirm, input, password, select } from "@inquirer/prompts"
 import { createPrompt, isEnterKey, useKeypress, useState } from "@inquirer/core"
 
 import { c, useColor } from "../core/logger.ts"
+import { withFileLock } from "../core/file-lock.ts"
 import {
   PROJECT_ROOT,
   SKVM_CACHE,
@@ -37,9 +38,12 @@ import {
   getAdapterSettings,
   getDefaultAdapterConfigMode,
   detectLegacyHeadlessFields,
+  invalidateConfigCache,
+  resolveConfigWritePath,
 } from "../core/config.ts"
-import type { ProviderKind, AdapterConfigMode, HeadlessAgentDriverName } from "../core/types.ts"
+import type { ProviderKind, ProviderRoute, AdapterConfigMode, HeadlessAgentDriverName } from "../core/types.ts"
 import { HeadlessAgentDriverSchema } from "../core/types.ts"
+import { appendDiscoveredRoute } from "../core/config-write.ts"
 import { ALL_ADAPTERS, type AdapterName } from "../adapters/registry.ts"
 import { resolveUserHermesDir as resolveHermesProfileDir } from "../adapters/hermes.ts"
 import { resolveUserOpencodeConfigFile as resolveOpencodeConfigFile } from "../adapters/opencode.ts"
@@ -108,6 +112,34 @@ export async function runConfig(rawArgs: string[]): Promise<void> {
     case "doctor":
       await runDoctor()
       return
+    case "probes": {
+      const probesSub = rawArgs[1]
+      if (probesSub === "list") {
+        runProbesList()
+        return
+      }
+      if (probesSub === "clear") {
+        await runProbesClear(rawArgs[2])
+        return
+      }
+      if (probesSub === undefined) {
+        printProbesHelp()
+        return
+      }
+      console.error(c.red(`Unknown config probes subcommand: "${probesSub}"`))
+      printProbesHelp()
+      process.exit(1)
+      return
+    }
+    case "probe": {
+      const modelId = rawArgs[1]
+      if (!modelId) {
+        console.error(c.red("Usage: skvm config probe <modelId>"))
+        process.exit(1)
+      }
+      await runProbeEager(modelId)
+      return
+    }
     default:
       console.error(c.red(`Unknown subcommand: config ${sub}`))
       printHelp()
@@ -122,14 +154,20 @@ Usage:
   skvm config <subcommand>
 
 Subcommands:
-  init       Interactive wizard; writes ${shortenPath(CONFIG_WRITE_PATH)}
-  show       Print the resolved config and where each value came from
-  doctor     Verify that providers, adapters, and paths actually work
+  init              Interactive wizard; writes ${shortenPath(CONFIG_WRITE_PATH)}
+  show              Print the resolved config and where each value came from
+  doctor            Verify that providers, adapters, and paths actually work
+  probes list       Show auto-discovered provider routes
+  probes clear      Remove auto-discovered routes (all, or matching a pattern)
+  probe <modelId>   Eagerly probe one model id and write a route if clean
 
 Examples:
-  skvm config init      # first-time setup or update existing config
-  skvm config show      # see what skvm currently sees
-  skvm config doctor    # sanity check before running a long bench
+  skvm config init                         # first-time setup or update existing config
+  skvm config show                         # see what skvm currently sees
+  skvm config doctor                       # sanity check before running a long bench
+  skvm config probes list                  # show auto-discovered routes
+  skvm config probes clear                 # remove all auto-discovered routes
+  skvm config probe openrouter/qwen/foo    # probe one model id eagerly
 
 The config lives under \$SKVM_CACHE (default ~/.skvm/). A legacy in-tree
 location at <project>/skvm.config.json is also read for backwards compat.
@@ -175,7 +213,10 @@ async function runShow(): Promise<void> {
     console.log(`  ${"match".padEnd(colW)}  kind                 auth`)
     for (const r of providers.routes) {
       const tail = r.kind === "openai-compatible" && r.baseUrl ? ` ${c.dim(`@ ${r.baseUrl}`)}` : ""
-      console.log(`  ${r.match.padEnd(colW)}  ${r.kind.padEnd(20)} ${authBadge(r)}${tail}`)
+      const auto = r.discoveredAt
+        ? `  ${c.dim(`(auto-discovered ${r.discoveredAt.slice(0, 10)})`)}`
+        : ""
+      console.log(`  ${r.match.padEnd(colW)}  ${r.kind.padEnd(20)} ${authBadge(r)}${tail}${auto}`)
     }
   }
 
@@ -309,8 +350,9 @@ function smokeTestModelId(routes: readonly RouteDraft[]): string {
 const MAX_CONFIG_BACKUPS = 5
 
 function pruneOldConfigBackups(): number {
-  const dir = path.dirname(CONFIG_WRITE_PATH)
-  const prefix = `${path.basename(CONFIG_WRITE_PATH)}.bak.`
+  const configPath = resolveConfigWritePath()
+  const dir = path.dirname(configPath)
+  const prefix = `${path.basename(configPath)}.bak.`
   let entries: string[]
   try {
     entries = readdirSync(dir)
@@ -1414,6 +1456,12 @@ function printHeader(title: string): void {
   console.log(c.dim(bar))
 }
 
+// Re-export from core so the CLI and registry share the same implementation
+// without any circular dependency. The function lives in src/core/config-write.ts
+// which has no prompt or cli-config dependencies.
+export { appendDiscoveredRoute } from "../core/config-write.ts"
+
+
 function serialize(draft: ConfigDraft): string {
   // Drop empty optional fields so the output stays minimal.
   const out: Record<string, unknown> = {}
@@ -1448,4 +1496,142 @@ function serialize(draft: ConfigDraft): string {
     out.headlessAgent = draft.headlessAgent
   }
   return JSON.stringify(out, null, 2)
+}
+
+// ---------------------------------------------------------------------------
+// `probes list` / `probes clear` / `probe <modelId>` helpers
+// ---------------------------------------------------------------------------
+
+function runProbesList(): void {
+  const configPath = resolveConfigWritePath()
+  if (!existsSync(configPath)) {
+    console.log(c.dim("No auto-discovered routes."))
+    return
+  }
+  let cfg: { providers?: { routes?: ProviderRoute[] } }
+  try {
+    cfg = JSON.parse(readFileSync(configPath, "utf-8")) as { providers?: { routes?: ProviderRoute[] } }
+  } catch {
+    cfg = {}
+  }
+  const routes = cfg.providers?.routes ?? []
+  const discovered = routes.filter((r): r is ProviderRoute => Boolean(r.discoveredAt))
+  if (discovered.length === 0) {
+    console.log(c.dim("No auto-discovered routes."))
+    return
+  }
+  console.log(c.bold("Auto-discovered routes"))
+  for (const r of discovered) {
+    console.log(
+      `  ${c.green(r.match)} → ${r.kind} @ ${r.baseUrl ?? "(default)"}  ${c.dim(`(discovered ${r.discoveredAt})`)}`,
+    )
+  }
+}
+
+async function runProbesClear(pattern: string | undefined): Promise<void> {
+  const configPath = resolveConfigWritePath()
+  const lockPath = `${configPath}.lock`
+  await withFileLock(lockPath, { timeoutMs: 5_000 }, async () => {
+    if (!existsSync(configPath)) {
+      console.log(c.dim("No config file."))
+      return
+    }
+    const raw = readFileSync(configPath, "utf-8")
+    const draft = JSON.parse(raw) as Record<string, unknown> & {
+      providers?: { routes?: ProviderRoute[] }
+    }
+    const routes: ProviderRoute[] = draft.providers?.routes ?? []
+    const before = routes.length
+    const remaining = routes.filter((r) => {
+      // Keep non-auto-discovered routes always.
+      if (!r.discoveredAt) return true
+      // For auto-discovered routes: drop if no pattern given, or if pattern matches.
+      if (pattern && !simpleGlobMatch(pattern, r.match)) return true
+      return false
+    })
+    if (!draft.providers) draft.providers = { routes: [] }
+    draft.providers.routes = remaining
+    writeFileSync(configPath, JSON.stringify(draft, null, 2) + "\n")
+    try { chmodSync(configPath, 0o600) } catch { /* best-effort */ }
+    invalidateConfigCache()
+    console.log(c.green(`✓ Removed ${before - remaining.length} auto-discovered route(s).`))
+  })
+}
+
+/**
+ * Eagerly probe a single model id. Uses dynamic imports to avoid an import
+ * cycle: providers/registry.ts already imports appendDiscoveredRoute from this
+ * file, so a static top-level import back into registry.ts would form a cycle.
+ */
+async function runProbeEager(modelId: string): Promise<void> {
+  console.log(`Probing ${modelId}…`)
+  const saved = process.env.SKVM_AUTO_PROBE
+  process.env.SKVM_AUTO_PROBE = "0"
+  try {
+    // Dynamic imports to avoid cli-config ↔ providers/registry circular dependency.
+    const [
+      { resolveRoute, createProviderForModel },
+      { inferAnthropicBaseUrl, runProbe },
+      { AnthropicProvider },
+      { stripRoutingPrefix },
+    ] = await Promise.all([
+      import("../providers/registry.ts"),
+      import("../providers/probe.ts"),
+      import("../providers/anthropic.ts"),
+      import("../core/config.ts"),
+    ])
+
+    const route = resolveRoute(modelId)
+    if (route.kind !== "openai-compatible") {
+      console.log(c.dim(`Skipping — route kind "${route.kind}" is not subject to issue #26.`))
+      return
+    }
+    if (!route.baseUrl) {
+      console.log(c.dim(`Skipping — route "${route.match}" has no baseUrl.`))
+      return
+    }
+    const delegate = createProviderForModel(modelId)
+    const altBase = inferAnthropicBaseUrl(route.baseUrl)
+    if (!altBase) {
+      console.log(c.yellow("No Anthropic-shape alternative could be inferred from the baseUrl."))
+      return
+    }
+    const apiKey = route.apiKey ?? (route.apiKeyEnv ? process.env[route.apiKeyEnv] : undefined)
+    const alt = new AnthropicProvider({
+      apiKey,
+      model: stripRoutingPrefix(modelId),
+      baseUrl: altBase,
+    })
+    const verdict = await runProbe({ primary: delegate, alt: () => alt })
+    console.log(`Verdict: primary=${verdict.primary} alt=${verdict.alt ?? "-"}`)
+    if (verdict.primary === "polluted" && verdict.alt === "clean") {
+      const result = await appendDiscoveredRoute({
+        match: modelId,
+        kind: "anthropic",
+        baseUrl: altBase,
+        apiKey: route.apiKey,
+        apiKeyEnv: route.apiKeyEnv,
+        discoveredAt: new Date().toISOString(),
+        discoveredFrom: route.match,
+      })
+      console.log(c.green(result.written ? `✓ Wrote literal route for ${modelId}` : `(already present)`))
+    } else {
+      console.log(c.dim("No clean alternative — leaving config unchanged."))
+    }
+  } finally {
+    if (saved === undefined) delete process.env.SKVM_AUTO_PROBE
+    else process.env.SKVM_AUTO_PROBE = saved
+  }
+}
+
+function printProbesHelp(): void {
+  console.log(c.bold("skvm config probes"))
+  console.log(`  list             Show auto-discovered routes`)
+  console.log(`  clear [pattern]  Remove auto-discovered routes (all, or those matching pattern)`)
+  console.log(`  Use \`skvm config probe <modelId>\` to trigger an eager probe.`)
+}
+
+function simpleGlobMatch(pattern: string, value: string): boolean {
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")
+  return new RegExp(`^${escaped}$`).test(value)
 }

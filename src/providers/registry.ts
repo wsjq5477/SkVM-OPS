@@ -5,6 +5,29 @@ import { OpenRouterProvider } from "./openrouter.ts"
 import { AnthropicProvider } from "./anthropic.ts"
 import { OpenAICompatibleProvider } from "./openai-compatible.ts"
 import { ProviderAuthError } from "./errors.ts"
+import { AutoProbeProvider, type ProbeOrchestrator } from "./auto-probe.ts"
+import { runProbe, inferAnthropicBaseUrl } from "./probe.ts"
+import { appendDiscoveredRoute } from "../core/config-write.ts"
+
+/**
+ * Return true only when `baseUrl` is the exact official Anthropic API host.
+ * Uses `new URL()` to parse the hostname, which prevents substring-match
+ * bypasses like `https://notapi.anthropic.com.evil.com`.
+ *
+ * Returns `false` when the URL is unparseable — we treat an unrecognisable
+ * gateway as non-official, which skips the `claude-` prefix check. That
+ * matches the existing intent: the prefix guard is only for the real
+ * Anthropic backend, not arbitrary custom gateways.
+ */
+function isOfficialAnthropicUrl(baseUrl: string): boolean {
+  try {
+    return new URL(baseUrl).hostname === "api.anthropic.com"
+  } catch {
+    // Unparseable URL: treat as non-official so we don't accidentally
+    // enforce the claude- prefix on a custom gateway.
+    return false
+  }
+}
 
 /**
  * Built-in fallback route. Applied when `providers.routes` is empty or no
@@ -77,7 +100,14 @@ export function validateModelIdForRoute(modelId: string, route: ProviderRoute): 
       return
     }
     case "anthropic": {
-      if (!/^claude-/i.test(bare)) {
+      // The `claude-*` prefix check only applies to the official Anthropic
+      // endpoint. Third-party Anthropic-compatible gateways (e.g. xty.app's
+      // /v1/messages, DeepSeek's /anthropic, Minimax's /anthropic) serve
+      // non-Anthropic-vendor models whose ids do not start with "claude-"
+      // (glm-5-thinking, minimax-m2.5, etc.). Skip the prefix check when a
+      // custom baseUrl is configured and it is not api.anthropic.com.
+      const isOfficial = !route.baseUrl || isOfficialAnthropicUrl(route.baseUrl)
+      if (isOfficial && !/^claude-/i.test(bare)) {
         throw new Error(
           `Model id "${modelId}" doesn't look like an Anthropic model. ` +
           `Anthropic SDK expects ids starting with "claude-" (e.g. "anthropic/claude-sonnet-4.6"). ` +
@@ -99,12 +129,60 @@ export function validateModelIdForRoute(modelId: string, route: ProviderRoute): 
  * `overrides` lets test fixtures and exceptional call sites bypass env-var
  * lookup. Never use overrides to "work around" a missing route — add a route
  * instead.
+ *
+ * For openai-compatible routes, the returned provider is wrapped in an
+ * `AutoProbeProvider` that intercepts `ToolArgumentsParseError` failures,
+ * probes the same gateway via its Anthropic-shaped endpoint, and — if the
+ * alt is clean while the primary is polluted — writes a literal anthropic
+ * route and retries via `AnthropicProvider`. Set `SKVM_AUTO_PROBE=0` to
+ * opt out entirely.
  */
 export function createProviderForModel(
   modelId: string,
   overrides?: ProviderOverrides,
 ): LLMProvider {
-  return instantiate(modelId, resolveRoute(modelId), overrides)
+  const route = resolveRoute(modelId)
+  const delegate = instantiate(modelId, route, overrides)
+
+  // Auto-probe is gated to openai-compatible routes. The alternative endpoint
+  // that auto-probe synthesises is an Anthropic-shaped URL on the same host
+  // (e.g. /v1 → /v1/messages). That synthesis only makes sense when the
+  // primary route is an openai-compatible gateway; anthropic and openrouter
+  // routes have no such Anthropic-shaped alternative to discover.
+  if (route.kind !== "openai-compatible") return delegate
+
+  // Opt-out: env var, then check that auto-probe is even applicable here.
+  if (process.env.SKVM_AUTO_PROBE === "0") return delegate
+  if (!route.baseUrl) return delegate
+
+  const orchestrator: ProbeOrchestrator = async (mid, r) => {
+    const altBase = inferAnthropicBaseUrl(r.baseUrl ?? "")
+    if (!altBase) {
+      return { verdict: { primary: "polluted", alt: "indeterminate" }, altProvider: null, writeRoute: null }
+    }
+    const altApiKey = overrides?.apiKey ?? r.apiKey ?? (r.apiKeyEnv ? process.env[r.apiKeyEnv] : undefined)
+    const altProvider: LLMProvider = new AnthropicProvider({
+      apiKey: altApiKey,
+      model: stripRoutingPrefix(mid),
+      baseUrl: altBase,
+    })
+    const verdict = await runProbe({ primary: delegate, alt: () => altProvider })
+    if (verdict.primary === "polluted" && verdict.alt === "clean") {
+      const writeRoute = async () => appendDiscoveredRoute({
+        match: mid,
+        kind: "anthropic",
+        baseUrl: altBase,
+        apiKey: r.apiKey,
+        apiKeyEnv: r.apiKeyEnv,
+        discoveredAt: new Date().toISOString(),
+        discoveredFrom: r.match,
+      })
+      return { verdict, altProvider, writeRoute }
+    }
+    return { verdict, altProvider: null, writeRoute: null }
+  }
+
+  return new AutoProbeProvider(delegate, modelId, route, orchestrator)
 }
 
 export function findMatchingRoute(
@@ -217,10 +295,14 @@ function instantiate(
       return new OpenRouterProvider({ apiKey, model: stripRoutingPrefix(modelId) })
 
     case "anthropic":
-      // Anthropic SDK expects a bare id ("claude-sonnet-4.6").
+      // Anthropic SDK expects a bare id ("claude-sonnet-4.6"). When the
+      // route specifies a custom baseUrl (e.g., a third-party Anthropic-
+      // compatible gateway), thread it through — the SDK appends
+      // `/v1/messages` itself.
       return new AnthropicProvider({
         apiKey,
         model: stripRoutingPrefix(modelId),
+        baseUrl: overrides?.baseUrl ?? route.baseUrl,
       })
 
     case "openai-compatible": {

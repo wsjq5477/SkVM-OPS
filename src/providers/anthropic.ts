@@ -72,8 +72,13 @@ export class AnthropicProvider implements LLMProvider {
   private client: Anthropic
   private model: string
 
-  constructor(opts: { apiKey?: string; model?: string } = {}) {
-    this.client = new Anthropic({ apiKey: opts.apiKey ?? process.env.ANTHROPIC_API_KEY })
+  constructor(opts: { apiKey?: string; model?: string; baseUrl?: string } = {}) {
+    this.client = new Anthropic({
+      apiKey: opts.apiKey ?? process.env.ANTHROPIC_API_KEY,
+      // `baseURL: undefined` lets the SDK fall back to ANTHROPIC_BASE_URL env
+      // or the default https://api.anthropic.com — existing callers unaffected.
+      baseURL: opts.baseUrl,
+    })
     this.model = opts.model ?? process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4.6"
   }
 

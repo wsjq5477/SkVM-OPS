@@ -286,6 +286,29 @@ export const CONFIG_WRITE_PATH = path.join(SKVM_CACHE, "skvm.config.json")
 let _configPath: string | undefined
 
 /**
+ * Derive the skvm.config.json path under the current SKVM_CACHE root.
+ * Re-reads `process.env.SKVM_CACHE` at call time so test code that
+ * overrides the env var between calls sees the updated path. When
+ * `SKVM_CACHE` is not set, falls back to `~/.skvm/` resolved via
+ * `expandHome` (which uses `process.env.HOME` with an empty-string
+ * fallback, consistent with the rest of the cache-root logic).
+ *
+ * Exported so callers that need to write or probe the config path at
+ * runtime (e.g. cli-config's `probes clear`) don't have to re-derive
+ * it independently and risk inconsistency.
+ */
+export function resolveConfigWritePath(): string {
+  const env = process.env.SKVM_CACHE
+  if (env) return path.join(path.resolve(env), "skvm.config.json")
+  return CONFIG_WRITE_PATH
+}
+
+/** @internal alias kept for in-file callers */
+function currentConfigWritePath(): string {
+  return resolveConfigWritePath()
+}
+
+/**
  * Resolved on-disk path for `skvm.config.json`. Lazy + memoized so that
  * commands which never read the config (e.g. `--version`) skip the existsSync
  * syscalls.
@@ -299,10 +322,11 @@ let _configPath: string | undefined
  */
 export function getConfigPath(): string {
   if (_configPath) return _configPath
-  if (existsSync(CONFIG_WRITE_PATH)) return _configPath = CONFIG_WRITE_PATH
+  const writePath = currentConfigWritePath()
+  if (existsSync(writePath)) return _configPath = writePath
   const legacy = path.join(PROJECT_ROOT, "skvm.config.json")
   if (existsSync(legacy)) return _configPath = legacy
-  return _configPath = CONFIG_WRITE_PATH
+  return _configPath = writePath
 }
 
 export function getProjectConfig(): SkVMConfig {
@@ -448,34 +472,54 @@ export function getProposalsRoot(): string {
 }
 
 /**
+ * Invalidate all in-process config caches so the next read re-loads from disk.
+ * Call after mutating the config file at runtime — e.g. when the auto-probe
+ * layer writes a discovered route via appendDiscoveredRoute. Without this, a
+ * same-process re-resolution would see the stale pre-write config.
+ *
+ * Also busts the CommonJS `require()` cache for the config file path(s) so that
+ * `getProjectConfig`'s synchronous `require()` call re-reads the updated JSON
+ * rather than serving the stale in-memory module. Both the currently-resolved
+ * path and the well-known candidate paths are purged, since a caller may
+ * invalidate before or after the singletons have been populated.
+ */
+export function invalidateConfigCache(): void {
+  const candidatePaths = new Set<string>([
+    _configPath ?? currentConfigWritePath(),
+    CONFIG_WRITE_PATH,
+    path.join(PROJECT_ROOT, "skvm.config.json"),
+  ])
+  for (const p of candidatePaths) {
+    try { delete require.cache[require.resolve(p)] } catch { /* path may not be in cache */ }
+  }
+  _configPath = undefined
+  _configCache = undefined
+  _providersConfigCache = undefined
+  _headlessAgentConfigCache = undefined
+}
+
+/**
  * Reset all module-level config caches.
  *
  * Intended for test use only. When multiple test files run in the same Bun
  * worker they share a module registry, so one file's cached config bleeds into
  * the next file's `beforeAll`. Calling this in `beforeAll` before writing a new
- * `skvm.config.json` guarantees the file will be read fresh.
- *
- * Also purges the `require.cache` entry for the config file path so that
- * Bun/Node's JSON-require cache doesn't serve a stale value when
- * `getProjectConfig` calls `require(getConfigPath())` again.
+ * `skvm.config.json` guarantees the file will be read fresh. Delegates to
+ * `invalidateConfigCache` (same singleton + require.cache busting).
  *
  * Not intended for production use — the caches exist to avoid repeated disk
  * I/O across the lifetime of a single CLI invocation.
  */
 export function resetConfigCacheForTesting(): void {
-  // Flush our own singletons first so we get the new path on next read.
-  _configPath = undefined
-  _configCache = undefined
-  _providersConfigCache = undefined
-  _headlessAgentConfigCache = undefined
-  // Purge require.cache for the config JSON so require() re-reads from disk.
-  // getConfigPath() is undefined after the reset above, so resolve both
-  // well-known candidate paths.
-  const candidatePaths = [
-    CONFIG_WRITE_PATH,
-    path.join(PROJECT_ROOT, "skvm.config.json"),
-  ]
-  for (const p of candidatePaths) {
-    try { delete require.cache[require.resolve(p)] } catch { /* not cached */ }
-  }
+  invalidateConfigCache()
+}
+
+/**
+ * Test-only alias retained for the auto-probe test suite. Clears all
+ * module-level config caches so the next call to `getConfigPath` /
+ * `getProjectConfig` / `getProvidersConfig` re-derives from the current
+ * `process.env.SKVM_CACHE`. Equivalent to `resetConfigCacheForTesting`.
+ */
+export function __resetConfigCacheForTest(): void {
+  invalidateConfigCache()
 }
