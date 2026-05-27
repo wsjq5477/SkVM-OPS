@@ -1,0 +1,76 @@
+[6636929:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965867][ERROR]ufshcd bf300000.ufs: : RX_FSM_STATE                0xc1: LANE0: 0x00000002, LANE1: 0x00000002
+[6636930:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965916][ERROR][do_log_transaction:52] [1749962273.651643][ED_00][transaction start] now mono_time is [115066.722303]
+[6636931:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965928][PANIC][ED_00]==== Exception Dump Start (signum: 5, masked: 0) ====
+[6636932:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965942][PANIC][ED_00]Release: hmkernel-localversion-1.10.1.B070  ulibs version: 202009190 fs version: 202200219  actv version: 202010280
+          mem version: 202007060  affinity version: 20207020  actv signal version: 20200323
+[6636933:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965953][PANIC][ED_00]Exception registers:
+[6636934:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965965][PANIC][ED_00] ESR=f2000800 (EC=0x3c, IL=0x1, ISS=0x800), FAR=0000000000000000, ELR=00000005f46acc18
+[6636935:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965975][PANIC][ED_00]Abort address pte (0):
+[6636936:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965987][PANIC][ED_00] abort address not in vregion
+[6636937:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965998][PANIC][ED_00]abort address in coobj reserved vm (from 0 to 0, cur populate: 0)
+[6636938:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966006][PANIC][ED_00]Thread info:
+[6636939:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966041][PANIC][ED_00] name=ufs_eh_worker, tid=189, state=RUNNING, sctime=115066.720046109, tcb_cref=5020600081137, pid=34, ppid=26, pgid=1, cpu=1, cur_rq=31, curr_hmsigmask=0xffffffffefffc3e1, base_hmsigmask=0, pending_signal=0, thread_flags=0x8de0, cur_prio=20, block=NONE, prev_tcb_cref=5020600081185, preempt_cref=0,
+[6636940:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966056][PANIC][ED_00] last_check=[115066.720046109, 0 on 1], secure_cookie=0, prefer_cookie=0, smt_expeller=0, extra_sched_info=[0,3,80000000,502010008108d,1,0] time_slice:10000us
+[6636941:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966070][PANIC][ED_00][actv_0]
+[6636942:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966153][PANIC][ED_00]Dump registers:
+[6636943:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966163][PANIC][ED_00] X0=0000000000000001 X1=0000000000000000
+[6636944:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966173][PANIC][ED_00] X2=0000000000000000 X3=0000000000000000
+[6636945:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966181][PANIC][ED_00] X4=ffff103000000800 X5=0000000000000000
+[6636946:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966190][PANIC][ED_00] X6=0000000000000000 X7=0000000000000005
+[6636947:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966199][PANIC][ED_00] X8=0000000000000000 X9=0000000000000000
+[6636948:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966208][PANIC][ED_00] X10=0000000000000001 X11=0000000000000000
+[6636949:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966218][PANIC][ED_00] X12=0000000003fffc40 X13=0000000000000053
+[6636950:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966228][PANIC][ED_00] X14=00000005f4991b08 X15=00000005f45bdff4
+[6636951:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966236][PANIC][ED_00] X16=00000004f0aa4d08 X17=00000004f05ac738
+[6636952:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966245][PANIC][ED_00] X18=0000000000000000 X19=0000004004020908
+[6636953:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966254][PANIC][ED_00] X20=00000000fffffffb X21=0000000000000000
+[6636954:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966262][PANIC][ED_00] X22=0000004004020030 X23=00000004f26f3490
+[6636955:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966271][PANIC][ED_00] X24=0000004004024988 X25=0000004004020030
+[6636956:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966280][PANIC][ED_00] X26=00000004f26f3490 X27=0000004004024508
+[6636957:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966288][PANIC][ED_00] X28=0000004004025f00 X29=00000004f26f2fc0
+[6636958:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966298][PANIC][ED_00] PC=     0x5f46acc18 SP=00000004f26f2fc0
+[6636959:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966308][PANIC][ED_00] LR=0xe17f0005f46acbf4 SPSR=0000000060000000
+[6636960:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966318][PANIC][ED_00] TPIDR=00000004f26f3380 actv_cref=0005020600081137
+[6636961:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966327][PANIC][ED_00]Dump fpu or simd registers:
+[6636962:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966336][PANIC][ED_00] V0=0000000000000000 0000000000000000
+[6636963:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966344][PANIC][ED_00] V1=0000000000000000 0000000000000000
+[6636964:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966353][PANIC][ED_00] V2=0000000000000000 0000000000000000
+[6636965:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966361][PANIC][ED_00] V3=0000000000000000 0000000000000000
+[6636966:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966370][PANIC][ED_00] V4=0000000000000000 0000000000000000
+[6636967:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966379][PANIC][ED_00] V5=0000000000000000 0000000000000000
+[6636968:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966387][PANIC][ED_00] V6=0000000000000000 0000000000000000
+[6636969:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966396][PANIC][ED_00] V7=0000000000000000 0000000000000000
+[6636970:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966405][PANIC][ED_00] V8=0000000000000000 0000000000000000
+[6636971:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966413][PANIC][ED_00] V9=0000000000000000 0000000000000000
+[6636972:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966422][PANIC][ED_00] V10=0000000000000000 0000000000000000
+[6636973:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966431][PANIC][ED_00] V11=0000000000000000 0000000000000000
+[6636974:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966439][PANIC][ED_00] V12=0000000000000000 0000000000000000
+[6636975:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966447][PANIC][ED_00] V13=0000000000000000 0000000000000000
+[6636976:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966456][PANIC][ED_00] V14=0000000000000000 0000000000000000
+[6636977:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966465][PANIC][ED_00] V15=0000000000000000 0000000000000000
+[6636978:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966474][PANIC][ED_00] V16=0000000000000000 0000000000000000
+[6636979:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966482][PANIC][ED_00] V17=0000000000000000 0000000000000000
+[6636980:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966491][PANIC][ED_00] V18=0000000000000000 0000000000000000
+[6636981:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966500][PANIC][ED_00] V19=0000000000000000 0000000000000000
+[6636982:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966508][PANIC][ED_00] V20=0000000000000000 0000000000000000
+[6636983:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966517][PANIC][ED_00] V21=0000000000000000 0000000000000000
+[6636984:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966525][PANIC][ED_00] V22=0000000000000000 0000000000000000
+[6636985:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966534][PANIC][ED_00] V23=0000000000000000 0000000000000000
+[6636986:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966543][PANIC][ED_00] V24=0000000000000000 0000000000000000
+[6636987:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966551][PANIC][ED_00] V25=0000000000000000 0000000000000000
+[6636988:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966560][PANIC][ED_00] V26=0000000000000000 0000000000000000
+[6636989:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966569][PANIC][ED_00] V27=0000000000000000 0000000000000000
+[6636990:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966577][PANIC][ED_00] V28=0000000000000000 0000000000000000
+[6636991:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966586][PANIC][ED_00] V29=0000000000000000 0000000000000000
+[6636992:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966595][PANIC][ED_00] V30=0000000000000000 0000000000000000
+[6636993:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966604][PANIC][ED_00] V31=0000000000000000 0000000000000000
+[6636994:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966613][PANIC][ED_00] FPSR=00000000 FPCR=00000000
+[6636995:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966626][PANIC][ED_00]Stack backtrace (pname=/bin/devhost.elf, pid=34):
+[6636996:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970077][PANIC][ED_00] [00000000003adc18][FP: 00000004f26f2fc0]<ufshcd_reset_and_restore+0x2d0/0x2d4> (/lib/libdh-linux.so.5.10-cpro)
+[6636997:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970406][PANIC][ED_00] [00000000003b07a8][FP: 00000004f26f3090]<ufshcd_err_handler+0x5c4/0x15b8> (/lib/libdh-linux.so.5.10-cpro)
+[6636998:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970462][PANIC][ED_00] [000000000013d37c][FP: 00000004f26f30f0]<kthread_worker_fn+0x13c/0x300> (/lib/libdh-linux.so.5.10-cpro)
+[6636999:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970516][PANIC][ED_00] [000000000013e94c][FP: 00000004f26f3130]<kthread+0x190/0x1b0> (/lib/libdh-linux.so.5.10-cpro)
+[6637000:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970545][PANIC][ED_00] [000000000011fe04][FP: 00000004f26f3180]<kernel_thread_helper+0x60/0x6c> (/lib/libdh-linux.so.5.10-cpro)
+[6637001:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.971075][PANIC][ED_00] [00000000000ac514][FP: 00000004f26f31b0]<raw_thread_entry+0x28/0x30> (/lib/libhmulibs.so.0)
+[6637002:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.971142][PANIC][ED_00] [000000000009fe10][FP: 0000000000000000]<???+0x0/0x0> (/lib/libhmulibs.so.0)
+[6637003:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.971153][PANIC][ED_00]Elf load info (pname=/bin/devhost.elf, pid=34):
