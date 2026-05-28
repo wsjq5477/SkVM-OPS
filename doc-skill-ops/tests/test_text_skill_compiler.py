@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
 
 
@@ -11,8 +12,37 @@ ROOT = Path(__file__).resolve().parents[2]
 COMPILER = ROOT / "doc-skill-ops" / "compiler" / "text_skill_compiler.py"
 EXAMPLE = ROOT / "doc-skill-ops" / "examples" / "hm-kernel-logs"
 
+sys.path.insert(0, str(ROOT / "doc-skill-ops" / "compiler"))
+from text_skill_compiler import OpenAICompatibleClient, build_client  # noqa: E402
+
 
 class TextSkillCompilerTests(unittest.TestCase):
+    def test_local_provider_uses_openai_compatible_base_url(self):
+        client = build_client(Namespace(
+            mock_llm=None,
+            provider="local",
+            model="qwen-local",
+            base_url="http://127.0.0.1:8000/v1",
+            api_key=None,
+        ))
+
+        self.assertIsInstance(client, OpenAICompatibleClient)
+        self.assertEqual(client.base_url, "http://127.0.0.1:8000/v1")
+        self.assertEqual(client.model, "qwen-local")
+        self.assertEqual(client.api_key, "local")
+
+    def test_local_provider_requires_base_url(self):
+        with self.assertRaises(SystemExit) as ctx:
+            build_client(Namespace(
+                mock_llm=None,
+                provider="local",
+                model="qwen-local",
+                base_url=None,
+                api_key=None,
+            ))
+
+        self.assertIn("--base-url is required", str(ctx.exception))
+
     def test_mock_llm_compile_creates_optimized_skill_and_evaluation(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "hm-kernel-logs-optimized"

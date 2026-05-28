@@ -130,24 +130,29 @@ def build_client(args: argparse.Namespace) -> LLMClient:
     provider = args.provider
     model = args.model
     if provider == "openai":
-        key = os.environ.get("OPENAI_API_KEY")
+        key = args.api_key or os.environ.get("OPENAI_API_KEY")
         if not key:
-            raise SystemExit("OPENAI_API_KEY is required for --provider openai")
+            raise SystemExit("OPENAI_API_KEY or --api-key is required for --provider openai")
         return OpenAICompatibleClient("https://api.openai.com/v1", key, model)
     if provider == "openrouter":
-        key = os.environ.get("OPENROUTER_API_KEY")
+        key = args.api_key or os.environ.get("OPENROUTER_API_KEY")
         if not key:
-            raise SystemExit("OPENROUTER_API_KEY is required for --provider openrouter")
+            raise SystemExit("OPENROUTER_API_KEY or --api-key is required for --provider openrouter")
         return OpenAICompatibleClient(
             "https://openrouter.ai/api/v1",
             key,
             model,
             {"HTTP-Referer": "https://github.com/wsjq5477/SkVM-OPS", "X-Title": "Text Skill Compiler"},
         )
+    if provider == "local":
+        if not args.base_url:
+            raise SystemExit("--base-url is required for --provider local")
+        key = args.api_key or os.environ.get("LOCAL_LLM_API_KEY") or "local"
+        return OpenAICompatibleClient(args.base_url, key, model)
     if provider == "anthropic":
-        key = os.environ.get("ANTHROPIC_API_KEY")
+        key = args.api_key or os.environ.get("ANTHROPIC_API_KEY")
         if not key:
-            raise SystemExit("ANTHROPIC_API_KEY is required for --provider anthropic")
+            raise SystemExit("ANTHROPIC_API_KEY or --api-key is required for --provider anthropic")
         normalized = model.split("/", 1)[1] if model.startswith("anthropic/") else model
         return AnthropicClient(key, normalized)
     raise SystemExit(f"unsupported provider: {provider}")
@@ -340,8 +345,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--out", required=True, help="Output skill directory.")
     parser.add_argument("--name", required=True, help="Optimized skill name.")
     parser.add_argument("--mock-llm", help="Directory of numbered mock JSON responses.")
-    parser.add_argument("--provider", default="openrouter", choices=["openai", "openrouter", "anthropic"], help="Live LLM provider.")
+    parser.add_argument("--provider", default="openrouter", choices=["openai", "openrouter", "anthropic", "local"], help="Live LLM provider.")
     parser.add_argument("--model", default="openrouter/anthropic/claude-sonnet-4.6", help="Model id for live providers.")
+    parser.add_argument("--base-url", help="OpenAI-compatible base URL for --provider local, for example http://127.0.0.1:8000/v1.")
+    parser.add_argument("--api-key", help="API key override. Optional for --provider local; defaults to LOCAL_LLM_API_KEY or 'local'.")
     parser.add_argument("--max-repair-rounds", type=int, default=2)
     return parser.parse_args(argv)
 
