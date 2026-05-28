@@ -1,6 +1,10 @@
 # Generic Text Skill Compiler Design
 
-Status: approved for implementation
+Status: implemented as v1; superseded for future work by `2026-05-28-skillflow-graph-compiler-design.md`
+
+This document describes the first contract-first implementation. New compiler
+work should follow the graph-first SkillFlow design unless a task explicitly
+targets v1 behavior.
 
 ## Goal
 
