@@ -114,6 +114,9 @@ python doc-skill-ops\compiler\text_skill_compiler.py `
   tests/
     test_analyze_text.py
   compiled/
+    flow_graph.raw.json
+    flow_graph.json
+    graph_validation.json
     contract.json
     solidification.json
     generation.json
@@ -130,12 +133,13 @@ python doc-skill-ops\compiler\text_skill_compiler.py `
 LLM 编译器会：
 
 1. 读取原始 skill/workflow 和样例日志。
-2. 抽取输入/输出 contract。
-3. 识别确定性操作，例如解析、regex 抽取、分组、时间线生成和 schema 验证。
-4. 生成 `scripts/analyze_text.py` 和测试。
-5. 在本地运行生成的测试。
-6. 如果测试失败，将失败信息发回 LLM 修复。
-7. 写出优化后的 `SKILL.md`，先运行 Python analyzer，再把剩余推理交给 Claude。
+2. 从自然语言 workflow 抽取 SkillFlow 执行流图。
+3. 验证图结构，并从图中派生输入/输出 contract。
+4. 识别确定性的图节点和操作，例如解析、regex 抽取、分组、时间线生成和 schema 验证。
+5. 生成 `scripts/analyze_text.py` 和测试。
+6. 在本地运行生成的测试。
+7. 如果测试失败，将失败信息发回 LLM 修复。
+8. 写出优化后的 `SKILL.md`，先运行 Python analyzer，再把剩余推理交给 Claude。
 
 Python 不是智能层。Python 是由 LLM 生成的确定性执行层。
 

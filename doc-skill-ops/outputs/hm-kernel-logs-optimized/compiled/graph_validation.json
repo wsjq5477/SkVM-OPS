@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "errors": [],
+  "warnings": [],
+  "node_count": 6,
+  "edge_count": 7,
+  "reachable_nodes": [
+    "decode_esr",
+    "detect_known_patterns",
+    "extract_crash_facts",
+    "infer_root_cause",
+    "load_input",
+    "write_report"
+  ]
+}

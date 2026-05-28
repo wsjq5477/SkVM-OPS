@@ -4,42 +4,31 @@
       "id": "extract_crash_facts",
       "kind": "python_ready",
       "description": "Extract PANIC facts, ESR/FAR/ELR, crash thread, key logs, timeline, and stack frames.",
-      "outputs": [
-        "handoff_json"
-      ]
+      "outputs": ["handoff_json"]
     },
     {
       "id": "decode_esr",
       "kind": "python_ready",
       "description": "Decode ESR fields and classify BRK-style exception evidence.",
-      "outputs": [
-        "esr_analysis"
-      ]
+      "outputs": ["esr_analysis"]
     },
     {
       "id": "detect_known_patterns",
       "kind": "hybrid",
       "description": "Run deterministic pattern checks and pass candidates to Claude for final judgment.",
-      "outputs": [
-        "pattern_detections",
-        "root_cause_candidates"
-      ]
+      "outputs": ["pattern_detections", "root_cause_candidates"]
     },
     {
       "id": "infer_root_cause",
       "kind": "llm_only",
       "description": "Judge root cause likelihood, uncertainty, and engineering recommendations from extracted facts.",
-      "outputs": [
-        "root_cause_hypothesis"
-      ]
+      "outputs": ["root_cause_hypothesis"]
     },
     {
       "id": "write_report",
       "kind": "llm_only",
       "description": "Write final fixed-format incident report.",
-      "outputs": [
-        "final_report"
-      ]
+      "outputs": ["final_report"]
     }
   ]
 }

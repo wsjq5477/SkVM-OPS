@@ -33,6 +33,160 @@ def estimate_tokens(text: str) -> int:
     return max(1, round(len(text) / 4))
 
 
+def _as_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _append_unique(items: list[str], value: str) -> None:
+    if value and value not in items:
+        items.append(value)
+
+
+def validate_flow_graph(graph: dict[str, Any]) -> dict[str, Any]:
+    """Validate the natural-language execution-flow graph shape."""
+    errors: list[str] = []
+    warnings: list[str] = []
+    required_keys = ["graph_id", "entry_nodes", "exit_nodes", "nodes", "edges"]
+    for key in required_keys:
+        if key not in graph:
+            errors.append(f"missing required graph key: {key}")
+
+    nodes = _as_list(graph.get("nodes"))
+    edges = _as_list(graph.get("edges"))
+    entry_nodes = [str(n) for n in _as_list(graph.get("entry_nodes"))]
+    exit_nodes = [str(n) for n in _as_list(graph.get("exit_nodes"))]
+    node_ids: set[str] = set()
+    duplicate_ids: set[str] = set()
+
+    for index, node in enumerate(nodes):
+        if not isinstance(node, dict):
+            errors.append(f"node {index} must be an object")
+            continue
+        node_id = node.get("id")
+        if not isinstance(node_id, str) or not node_id:
+            errors.append(f"node {index} is missing non-empty id")
+            continue
+        if node_id in node_ids:
+            duplicate_ids.add(node_id)
+        node_ids.add(node_id)
+        for field in ["type", "description", "inputs", "outputs", "owner"]:
+            if field not in node:
+                errors.append(f"node {node_id} is missing required field: {field}")
+        if "inputs" in node and not isinstance(node["inputs"], list):
+            errors.append(f"node {node_id} inputs must be a list")
+        if "outputs" in node and not isinstance(node["outputs"], list):
+            errors.append(f"node {node_id} outputs must be a list")
+
+    for node_id in sorted(duplicate_ids):
+        errors.append(f"duplicate node id: {node_id}")
+    for node_id in entry_nodes:
+        if node_id not in node_ids:
+            errors.append(f"entry node is not defined: {node_id}")
+    for node_id in exit_nodes:
+        if node_id not in node_ids:
+            errors.append(f"exit node is not defined: {node_id}")
+    if not entry_nodes:
+        errors.append("entry_nodes must contain at least one node id")
+    if not exit_nodes:
+        errors.append("exit_nodes must contain at least one node id")
+
+    adjacency: dict[str, list[str]] = {node_id: [] for node_id in node_ids}
+    for index, edge in enumerate(edges):
+        if not isinstance(edge, dict):
+            errors.append(f"edge {index} must be an object")
+            continue
+        source = edge.get("from")
+        target = edge.get("to")
+        kind = edge.get("kind")
+        if not isinstance(source, str) or not source:
+            errors.append(f"edge {index} is missing non-empty from")
+            continue
+        if not isinstance(target, str) or not target:
+            errors.append(f"edge {index} is missing non-empty to")
+            continue
+        if not isinstance(kind, str) or not kind:
+            errors.append(f"edge {index} is missing non-empty kind")
+        if source not in node_ids:
+            errors.append(f"edge {index} source is not defined: {source}")
+        if target not in node_ids:
+            errors.append(f"edge {index} target is not defined: {target}")
+        if source in adjacency and target in node_ids:
+            adjacency[source].append(target)
+
+    reachable: set[str] = set()
+    stack = [node_id for node_id in entry_nodes if node_id in node_ids]
+    while stack:
+        node_id = stack.pop()
+        if node_id in reachable:
+            continue
+        reachable.add(node_id)
+        stack.extend(adjacency.get(node_id, []))
+    for node_id in sorted(node_ids - reachable):
+        warnings.append(f"node is not reachable from entry nodes: {node_id}")
+
+    return {
+        "status": "passed" if not errors else "failed",
+        "errors": errors,
+        "warnings": warnings,
+        "node_count": len(nodes),
+        "edge_count": len(edges),
+        "reachable_nodes": sorted(reachable),
+    }
+
+
+def derive_contract_from_graph(graph: dict[str, Any]) -> dict[str, Any]:
+    """Derive a v1-compatible contract from a SkillFlow graph."""
+    nodes = [node for node in _as_list(graph.get("nodes")) if isinstance(node, dict)]
+    entities: list[str] = []
+    deterministic_operations: list[str] = []
+    residual_reasoning: list[str] = []
+    report_sections: list[str] = []
+    deterministic_types = {"load_input", "chunk", "extract", "normalize", "filter", "aggregate", "decide", "validate"}
+    residual_types = {"classify", "reason", "report", "fallback"}
+    deterministic_owners = {"script", "script_candidate", "python_ready"}
+    residual_owners = {"llm", "llm_only", "llm_required"}
+
+    input_mode = "text"
+    for node in nodes:
+        node_id = str(node.get("id", ""))
+        node_type = str(node.get("type", ""))
+        owner = str(node.get("owner", ""))
+        description = str(node.get("description", ""))
+        inputs = [str(item) for item in _as_list(node.get("inputs"))]
+        outputs = [str(item) for item in _as_list(node.get("outputs"))]
+
+        if node_type == "load_input" and ("file_path" in inputs or "file" in description.lower()):
+            input_mode = "file_path"
+        if node_type in {"extract", "normalize", "classify"}:
+            for output in outputs:
+                if output not in {"log_text", "chunks", "final_report"}:
+                    _append_unique(entities, output)
+        if owner in deterministic_owners or node_type in deterministic_types:
+            _append_unique(deterministic_operations, node_id)
+        if owner in residual_owners or node_type in residual_types:
+            _append_unique(residual_reasoning, node_id)
+        if node_type == "report":
+            for output in outputs:
+                _append_unique(report_sections, output)
+
+    if not report_sections:
+        report_sections = ["summary", "timeline", "root_cause_analysis", "recommendations"]
+
+    return {
+        "input_mode": input_mode,
+        "report_sections": report_sections,
+        "entities": entities,
+        "deterministic_operations": deterministic_operations,
+        "residual_reasoning": residual_reasoning,
+        "failure_modes": [
+            "file not found",
+            "invalid flow graph",
+            "missing required extracted evidence",
+            "low-confidence deterministic extraction",
+        ],
+    }
+
+
 class LLMClient:
     def complete_json(self, pass_name: str, prompt: str) -> dict[str, Any]:
         raise NotImplementedError
@@ -158,10 +312,15 @@ def build_client(args: argparse.Namespace) -> LLMClient:
     raise SystemExit(f"unsupported provider: {provider}")
 
 
-def prompt_extract_contract(skill_text: str, sample_texts: list[str]) -> str:
+def prompt_extract_flow_graph(skill_text: str, sample_texts: list[str]) -> str:
     return "\n".join([
-        "Analyze this text-analysis skill/workflow and extract a JSON contract.",
-        "Required keys: input_mode, report_sections, entities, deterministic_operations, residual_reasoning, failure_modes.",
+        "Analyze this text-analysis skill/workflow and convert it into a SkillFlow execution graph.",
+        "Return only JSON with keys: graph_id, entry_nodes, exit_nodes, nodes, edges.",
+        "Each node must include: id, type, description, inputs, outputs, owner, determinism.",
+        "Use node types such as load_input, chunk, extract, normalize, filter, aggregate, classify, decide, reason, report, validate, fallback.",
+        "Use owner values such as script, script_candidate, hybrid, llm_required.",
+        "Use edge kinds such as sequence, data_dependency, condition_true, condition_false, loop, fallback.",
+        "Ground nodes in the source skill when possible using evidence_spans with source and quote.",
         "Skill/workflow:",
         skill_text[:30000],
         "Sample snippets:",
@@ -169,28 +328,83 @@ def prompt_extract_contract(skill_text: str, sample_texts: list[str]) -> str:
     ])
 
 
-def prompt_find_solidification(contract: dict[str, Any], skill_text: str) -> str:
-    return "\n".join([
-        "Classify which parts of this text-analysis skill can be solidified into Python.",
+def normalize_flow_graph(response: dict[str, Any]) -> dict[str, Any]:
+    graph = response.get("graph")
+    if isinstance(graph, dict):
+        return graph
+    return response
+
+
+def merge_contract_with_graph_defaults(contract: dict[str, Any], graph: dict[str, Any]) -> dict[str, Any]:
+    merged = derive_contract_from_graph(graph)
+    for key, value in contract.items():
+        if value not in (None, [], {}, ""):
+            merged[key] = value
+    return merged
+
+
+def prompt_extract_contract(skill_text: str, sample_texts: list[str], flow_graph: dict[str, Any] | None = None) -> str:
+    parts = [
+        "Analyze this text-analysis skill/workflow and extract a JSON contract.",
+        "Required keys: input_mode, report_sections, entities, deterministic_operations, residual_reasoning, failure_modes.",
+    ]
+    if flow_graph is not None:
+        parts.extend([
+            "Use this SkillFlow graph as the primary execution-flow source. Keep the contract compatible with the graph nodes.",
+            json.dumps(flow_graph, ensure_ascii=False),
+        ])
+    parts.extend([
+        "Skill/workflow:",
+        skill_text[:30000],
+        "Sample snippets:",
+        "\n---\n".join(s[:4000] for s in sample_texts),
+    ])
+    return "\n".join(parts)
+
+
+def prompt_find_solidification(contract: dict[str, Any], skill_text: str, flow_graph: dict[str, Any] | None = None) -> str:
+    parts = [
+        "Classify which graph nodes and text-analysis operations can be solidified into Python.",
         "Return JSON with key candidates: array of {id, kind, description, outputs}. kind is python_ready, hybrid, or llm_only.",
+        "Prefer node IDs from the SkillFlow graph when available.",
         "Contract:",
         json.dumps(contract, ensure_ascii=False),
+    ]
+    if flow_graph is not None:
+        parts.extend([
+            "SkillFlow graph:",
+            json.dumps(flow_graph, ensure_ascii=False),
+        ])
+    parts.extend([
         "Skill/workflow:",
         skill_text[:30000],
     ])
+    return "\n".join(parts)
 
 
-def prompt_generate_artifacts(name: str, contract: dict[str, Any], solidification: dict[str, Any]) -> str:
-    return "\n".join([
+def prompt_generate_artifacts(
+    name: str,
+    contract: dict[str, Any],
+    solidification: dict[str, Any],
+    flow_graph: dict[str, Any] | None = None,
+) -> str:
+    parts = [
         "Generate a complete optimized Claude skill bundle for this text-analysis skill.",
         "Return JSON with key files, mapping relative path to full file content.",
         "Required files: SKILL.md, scripts/analyze_text.py, references/report-format.md, references/analysis-contract.md, tests/test_analyze_text.py.",
+        "The generated skill should run deterministic Python first and leave residual graph nodes to Claude.",
         f"Skill name: {name}",
         "Contract:",
         json.dumps(contract, ensure_ascii=False),
         "Solidification:",
         json.dumps(solidification, ensure_ascii=False),
-    ])
+    ]
+    if flow_graph is not None:
+        parts.extend([
+            "SkillFlow graph:",
+            json.dumps(flow_graph, ensure_ascii=False),
+        ])
+    return "\n".join(parts)
 
 
 def prompt_repair(files: dict[str, str], validation: dict[str, Any]) -> str:
@@ -305,11 +519,21 @@ def compile_skill(config: CompileConfig, client: LLMClient) -> dict[str, Any]:
     sample_texts = [read_text(p) for p in config.samples]
     compiled = config.out / "compiled"
 
-    contract = client.complete_json("extract_contract", prompt_extract_contract(skill_text, sample_texts))
+    raw_flow_graph = client.complete_json("extract_flow_graph", prompt_extract_flow_graph(skill_text, sample_texts))
+    write_json(compiled / "flow_graph.raw.json", raw_flow_graph)
+    flow_graph = normalize_flow_graph(raw_flow_graph)
+    write_json(compiled / "flow_graph.json", flow_graph)
+    graph_validation = validate_flow_graph(flow_graph)
+    write_json(compiled / "graph_validation.json", graph_validation)
+    if graph_validation["status"] != "passed":
+        raise SystemExit("flow graph validation failed; see compiled/graph_validation.json")
+
+    extracted_contract = client.complete_json("extract_contract", prompt_extract_contract(skill_text, sample_texts, flow_graph))
+    contract = merge_contract_with_graph_defaults(extracted_contract, flow_graph)
     write_json(compiled / "contract.json", contract)
-    solidification = client.complete_json("find_solidification", prompt_find_solidification(contract, skill_text))
+    solidification = client.complete_json("find_solidification", prompt_find_solidification(contract, skill_text, flow_graph))
     write_json(compiled / "solidification.json", solidification)
-    generation = client.complete_json("generate_artifacts", prompt_generate_artifacts(config.name, contract, solidification))
+    generation = client.complete_json("generate_artifacts", prompt_generate_artifacts(config.name, contract, solidification, flow_graph))
     write_json(compiled / "generation.json", generation)
     files = generation.get("files")
     if not isinstance(files, dict):

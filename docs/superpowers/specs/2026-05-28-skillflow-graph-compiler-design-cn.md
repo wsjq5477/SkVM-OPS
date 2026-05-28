@@ -1,6 +1,6 @@
 # SkillFlow 图编译器设计
 
-状态：用户已认可设计，等待实施计划。
+状态：用户已认可设计；初始 graph-first 实现由 `docs/superpowers/plans/2026-05-29-skillflow-graph-compiler.md` 跟踪。
 
 ## 背景
 

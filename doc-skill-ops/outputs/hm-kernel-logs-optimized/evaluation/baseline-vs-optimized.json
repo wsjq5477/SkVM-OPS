@@ -3,7 +3,7 @@
     "baseline_estimated_input_tokens": 2463,
     "optimized_estimated_input_tokens": 1012,
     "estimated_token_reduction_percent": 58.9,
-    "optimized_analyzer_elapsed_ms": 251.378,
+    "optimized_analyzer_elapsed_ms": 263.314,
     "token_estimation_method": "round(characters / 4)",
     "live_llm_execution": false
   },

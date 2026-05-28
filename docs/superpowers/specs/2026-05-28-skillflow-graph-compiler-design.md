@@ -1,6 +1,6 @@
 # SkillFlow Graph Compiler Design
 
-Status: user-approved design, pending implementation plan
+Status: user-approved design; initial graph-first implementation tracked by `docs/superpowers/plans/2026-05-29-skillflow-graph-compiler.md`
 
 ## Background
 

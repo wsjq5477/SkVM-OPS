@@ -1,0 +1,183 @@
+{
+  "graph_id": "hm-kernel-log-analysis",
+  "entry_nodes": [
+    "load_input"
+  ],
+  "exit_nodes": [
+    "write_report"
+  ],
+  "nodes": [
+    {
+      "id": "load_input",
+      "type": "load_input",
+      "description": "Read the user-provided kernel log file path and load the text.",
+      "inputs": [
+        "file_path"
+      ],
+      "outputs": [
+        "log_text"
+      ],
+      "owner": "script",
+      "determinism": "high",
+      "evidence_spans": [
+        {
+          "source": "workflow.js",
+          "quote": "Workflow input is a kernel log file path."
+        }
+      ]
+    },
+    {
+      "id": "extract_crash_facts",
+      "type": "extract",
+      "description": "Extract panic type, crash thread, CPU, ESR, FAR, ELR, key logs, timeline, and stack frames.",
+      "inputs": [
+        "log_text"
+      ],
+      "outputs": [
+        "panic_type",
+        "crash_thread",
+        "crash_cpu",
+        "ESR",
+        "FAR",
+        "ELR",
+        "key_logs",
+        "timeline",
+        "call_stack"
+      ],
+      "owner": "script_candidate",
+      "determinism": "high",
+      "evidence_spans": [
+        {
+          "source": "workflow.js",
+          "quote": "Extract exception registers, thread info, and stack backtrace before report writing."
+        }
+      ]
+    },
+    {
+      "id": "decode_esr",
+      "type": "normalize",
+      "description": "Decode ESR fields and classify the exception type.",
+      "inputs": [
+        "ESR"
+      ],
+      "outputs": [
+        "esr_analysis"
+      ],
+      "owner": "script_candidate",
+      "determinism": "high",
+      "evidence_spans": [
+        {
+          "source": "workflow.js",
+          "quote": "Decode ESR and identify BRK style exception evidence."
+        }
+      ]
+    },
+    {
+      "id": "detect_known_patterns",
+      "type": "classify",
+      "description": "Detect deterministic Hungtask, deadlock, memory corruption, and driver/assertion hints.",
+      "inputs": [
+        "log_text",
+        "esr_analysis",
+        "call_stack"
+      ],
+      "outputs": [
+        "pattern_detections",
+        "root_cause_candidates"
+      ],
+      "owner": "hybrid",
+      "determinism": "medium",
+      "evidence_spans": [
+        {
+          "source": "workflow.js",
+          "quote": "Check Hungtask, deadlock, memory corruption, and ESR/stack based driver failure candidates."
+        }
+      ]
+    },
+    {
+      "id": "infer_root_cause",
+      "type": "reason",
+      "description": "Assess root cause likelihood, uncertainty, and engineering interpretation from extracted facts.",
+      "inputs": [
+        "pattern_detections",
+        "root_cause_candidates",
+        "timeline",
+        "call_stack"
+      ],
+      "outputs": [
+        "root_cause_hypothesis"
+      ],
+      "owner": "llm_required",
+      "determinism": "low",
+      "evidence_spans": [
+        {
+          "source": "workflow.js",
+          "quote": "Claude validates final root cause and uncertainty from extracted facts."
+        }
+      ]
+    },
+    {
+      "id": "write_report",
+      "type": "report",
+      "description": "Write the fixed-format incident report with summary, key logs, timeline, root cause, and recommendations.",
+      "inputs": [
+        "root_cause_hypothesis",
+        "panic_type",
+        "crash_thread",
+        "timeline"
+      ],
+      "outputs": [
+        "fault_summary",
+        "key_logs_section",
+        "timeline_section",
+        "root_cause_analysis",
+        "recommendations"
+      ],
+      "owner": "llm_required",
+      "determinism": "low",
+      "evidence_spans": [
+        {
+          "source": "workflow.js",
+          "quote": "Final report has five fixed sections."
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "load_input",
+      "to": "extract_crash_facts",
+      "kind": "data_dependency"
+    },
+    {
+      "from": "extract_crash_facts",
+      "to": "decode_esr",
+      "kind": "data_dependency"
+    },
+    {
+      "from": "decode_esr",
+      "to": "detect_known_patterns",
+      "kind": "data_dependency"
+    },
+    {
+      "from": "extract_crash_facts",
+      "to": "detect_known_patterns",
+      "kind": "data_dependency"
+    },
+    {
+      "from": "detect_known_patterns",
+      "to": "infer_root_cause",
+      "kind": "data_dependency"
+    },
+    {
+      "from": "infer_root_cause",
+      "to": "write_report",
+      "kind": "data_dependency"
+    },
+    {
+      "from": "extract_crash_facts",
+      "to": "write_report",
+      "kind": "data_dependency"
+    }
+  ]
+}
