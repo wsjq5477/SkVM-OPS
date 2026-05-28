@@ -12,8 +12,8 @@
 
 ## Speed
 
-- Optimized analyzer median runtime: `3.182 ms` over 15 local runs.
-- Optimized analyzer min/max runtime: `2.837 / 5.944 ms`.
+- Optimized analyzer median runtime: `2.627 ms` over 15 local runs.
+- Optimized analyzer min/max runtime: `2.303 / 4.470 ms`.
 - Baseline text-only skill has no local deterministic runtime; it requires a live Claude run over the full workflow and log.
 
 ## Token Footprint Estimate

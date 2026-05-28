@@ -1,0 +1,16 @@
+{
+  "candidates": [
+    {
+      "id": "hm-kernel-basic-parser",
+      "kind": "python_ready",
+      "description": "Extract PANIC facts, ESR/FAR/ELR, crash thread, key logs, timeline, and stack frames.",
+      "outputs": ["handoff_json"]
+    },
+    {
+      "id": "root-cause-reporting",
+      "kind": "llm_only",
+      "description": "Write final report and judge uncertainty from extracted facts.",
+      "outputs": ["final_report"]
+    }
+  ]
+}

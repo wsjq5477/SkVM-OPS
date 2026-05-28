@@ -1,0 +1,102 @@
+{
+  "status": "passed",
+  "tests": {
+    "command": [
+      "C:\\Python314\\python.exe",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.267s\n\nOK\n",
+    "elapsed_ms": 704.765
+  },
+  "analysis": {
+    "command": [
+      "C:\\Python314\\python.exe",
+      "D:\\LLM\\SkVM-OPS\\doc-skill-ops\\outputs\\hm-kernel-logs-optimized\\scripts\\analyze_text.py",
+      "D:\\LLM\\SkVM-OPS\\doc-skill-ops\\outputs\\hm-kernel-logs-optimized\\samples\\test_log.txt",
+      "--handoff"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"summary\": {\"fault_type\": \"KERNEL_UNIMPLEMENTED_EXCEPTION\", \"crash_thread\": \"ufs_eh_worker\", \"crash_cpu\": \"1\"}, \"registers\": {\"esr\": \"f2000800\", \"far\": \"0000000000000000\", \"elr\": \"00000005f46acc18\"}, \"esr\": {\"ec\": \"0x3c\", \"fault_type\": \"BRK instruction\"}, \"key_logs\": [\"[6636931:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965928][PANIC][ED_00]==== Exception Dump Start (signum: 5, masked: 0) ====\", \"[6636932:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965942][PANIC][ED_00]Release: hmkernel-localversion-1.10.1.B070  ulibs version: 202009190 fs version: 202200219  actv version: 202010280\", \"[6636933:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965953][PANIC][ED_00]Exception registers:\", \"[6636934:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965965][PANIC][ED_00] ESR=f2000800 (EC=0x3c, IL=0x1, ISS=0x800), FAR=0000000000000000, ELR=00000005f46acc18\", \"[6636935:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965975][PANIC][ED_00]Abort address pte (0):\", \"[6636936:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965987][PANIC][ED_00] abort address not in vregion\", \"[6636937:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965998][PANIC][ED_00]abort address in coobj reserved vm (from 0 to 0, cur populate: 0)\", \"[6636938:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966006][PANIC][ED_00]Thread info:\"], \"timeline\": [{\"time\": \"\", \"raw_log\": \"[6636931:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965928][PANIC][ED_00]==== Exception Dump Start (signum: 5, masked: 0) ====\", \"description\": \"relevant\"}, {\"time\": \"\", \"raw_log\": \"[6636932:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965942][PANIC][ED_00]Release: hmkernel-localversion-1.10.1.B070  ulibs version: 202009190 fs version: 202200219  actv version: 202010280\", \"description\": \"relevant\"}, {\"time\": \"\", \"raw_log\": \"[6636933:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965953][PANIC][ED_00]Exception registers:\", \"description\": \"relevant\"}, {\"time\": \"\", \"raw_log\": \"[6636934:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965965][PANIC][ED_00] ESR=f2000800 (EC=0x3c, IL=0x1, ISS=0x800), FAR=0000000000000000, ELR=00000005f46acc18\", \"description\": \"relevant\"}, {\"time\": \"\", \"raw_log\": \"[6636935:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965975][PANIC][ED_00]Abort address pte (0):\", \"description\": \"relevant\"}], \"call_stack\": [\"[6636996:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970077][PANIC][ED_00] [00000000003adc18][FP: 00000004f26f2fc0]<ufshcd_reset_and_restore+0x2d0/0x2d4> (/lib/libdh-linux.so.5.10-cpro)\", \"[6636997:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970406][PANIC][ED_00] [00000000003b07a8][FP: 00000004f26f3090]<ufshcd_err_handler+0x5c4/0x15b8> (/lib/libdh-linux.so.5.10-cpro)\", \"[6636998:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970462][PANIC][ED_00] [000000000013d37c][FP: 00000004f26f30f0]<kthread_worker_fn+0x13c/0x300> (/lib/libdh-linux.so.5.10-cpro)\", \"[6636999:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970516][PANIC][ED_00] [000000000013e94c][FP: 00000004f26f3130]<kthread+0x190/0x1b0> (/lib/libdh-linux.so.5.10-cpro)\", \"[6637000:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970545][PANIC][ED_00] [000000000011fe04][FP: 00000004f26f3180]<kernel_thread_helper+0x60/0x6c> (/lib/libdh-linux.so.5.10-cpro)\", \"[6637001:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.971075][PANIC][ED_00] [00000000000ac514][FP: 00000004f26f31b0]<raw_thread_entry+0x28/0x30> (/lib/libhmulibs.so.0)\", \"[6637002:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.971142][PANIC][ED_00] [000000000009fe10][FP: 0000000000000000]<???+0x0/0x0> (/lib/libhmulibs.so.0)\"], \"required_sections\": [\"故障摘要\", \"关键日志\", \"时间线\", \"根因分析\", \"建议排查方向\"], \"metrics\": {\"elapsed_ms\": 1.528}}\n",
+    "stderr": "",
+    "elapsed_ms": 251.378
+  },
+  "analysis_json": {
+    "summary": {
+      "fault_type": "KERNEL_UNIMPLEMENTED_EXCEPTION",
+      "crash_thread": "ufs_eh_worker",
+      "crash_cpu": "1"
+    },
+    "registers": {
+      "esr": "f2000800",
+      "far": "0000000000000000",
+      "elr": "00000005f46acc18"
+    },
+    "esr": {
+      "ec": "0x3c",
+      "fault_type": "BRK instruction"
+    },
+    "key_logs": [
+      "[6636931:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965928][PANIC][ED_00]==== Exception Dump Start (signum: 5, masked: 0) ====",
+      "[6636932:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965942][PANIC][ED_00]Release: hmkernel-localversion-1.10.1.B070  ulibs version: 202009190 fs version: 202200219  actv version: 202010280",
+      "[6636933:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965953][PANIC][ED_00]Exception registers:",
+      "[6636934:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965965][PANIC][ED_00] ESR=f2000800 (EC=0x3c, IL=0x1, ISS=0x800), FAR=0000000000000000, ELR=00000005f46acc18",
+      "[6636935:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965975][PANIC][ED_00]Abort address pte (0):",
+      "[6636936:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965987][PANIC][ED_00] abort address not in vregion",
+      "[6636937:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965998][PANIC][ED_00]abort address in coobj reserved vm (from 0 to 0, cur populate: 0)",
+      "[6636938:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.966006][PANIC][ED_00]Thread info:"
+    ],
+    "timeline": [
+      {
+        "time": "",
+        "raw_log": "[6636931:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965928][PANIC][ED_00]==== Exception Dump Start (signum: 5, masked: 0) ====",
+        "description": "relevant"
+      },
+      {
+        "time": "",
+        "raw_log": "[6636932:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965942][PANIC][ED_00]Release: hmkernel-localversion-1.10.1.B070  ulibs version: 202009190 fs version: 202200219  actv version: 202010280",
+        "description": "relevant"
+      },
+      {
+        "time": "",
+        "raw_log": "[6636933:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965953][PANIC][ED_00]Exception registers:",
+        "description": "relevant"
+      },
+      {
+        "time": "",
+        "raw_log": "[6636934:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965965][PANIC][ED_00] ESR=f2000800 (EC=0x3c, IL=0x1, ISS=0x800), FAR=0000000000000000, ELR=00000005f46acc18",
+        "description": "relevant"
+      },
+      {
+        "time": "",
+        "raw_log": "[6636935:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.965975][PANIC][ED_00]Abort address pte (0):",
+        "description": "relevant"
+      }
+    ],
+    "call_stack": [
+      "[6636996:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970077][PANIC][ED_00] [00000000003adc18][FP: 00000004f26f2fc0]<ufshcd_reset_and_restore+0x2d0/0x2d4> (/lib/libdh-linux.so.5.10-cpro)",
+      "[6636997:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970406][PANIC][ED_00] [00000000003b07a8][FP: 00000004f26f3090]<ufshcd_err_handler+0x5c4/0x15b8> (/lib/libdh-linux.so.5.10-cpro)",
+      "[6636998:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970462][PANIC][ED_00] [000000000013d37c][FP: 00000004f26f30f0]<kthread_worker_fn+0x13c/0x300> (/lib/libdh-linux.so.5.10-cpro)",
+      "[6636999:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970516][PANIC][ED_00] [000000000013e94c][FP: 00000004f26f3130]<kthread+0x190/0x1b0> (/lib/libdh-linux.so.5.10-cpro)",
+      "[6637000:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.970545][PANIC][ED_00] [000000000011fe04][FP: 00000004f26f3180]<kernel_thread_helper+0x60/0x6c> (/lib/libdh-linux.so.5.10-cpro)",
+      "[6637001:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.971075][PANIC][ED_00] [00000000000ac514][FP: 00000004f26f31b0]<raw_thread_entry+0x28/0x30> (/lib/libhmulibs.so.0)",
+      "[6637002:1]: pid=34   tid=189  comm=ufs_eh_worker    [2.971142][PANIC][ED_00] [000000000009fe10][FP: 0000000000000000]<???+0x0/0x0> (/lib/libhmulibs.so.0)"
+    ],
+    "required_sections": [
+      "故障摘要",
+      "关键日志",
+      "时间线",
+      "根因分析",
+      "建议排查方向"
+    ],
+    "metrics": {
+      "elapsed_ms": 1.528
+    }
+  },
+  "repair_rounds": 0
+}

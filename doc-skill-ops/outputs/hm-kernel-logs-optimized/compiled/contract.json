@@ -1,0 +1,34 @@
+{
+  "input_mode": "file_path",
+  "report_sections": [
+    "故障摘要",
+    "关键日志",
+    "时间线",
+    "根因分析",
+    "建议排查方向"
+  ],
+  "entities": [
+    "panic_type",
+    "crash_thread",
+    "ESR",
+    "FAR",
+    "ELR",
+    "call_stack"
+  ],
+  "deterministic_operations": [
+    "extract registers",
+    "extract crash thread",
+    "extract key logs",
+    "decode ESR"
+  ],
+  "residual_reasoning": [
+    "root cause likelihood",
+    "uncertainty",
+    "engineering recommendations"
+  ],
+  "failure_modes": [
+    "file not found",
+    "missing PANIC",
+    "missing registers"
+  ]
+}

@@ -7,9 +7,9 @@
   },
   "comparison": {
     "script_runs": 15,
-    "optimized_script_median_ms": 3.182,
-    "optimized_script_min_ms": 2.837,
-    "optimized_script_max_ms": 5.944,
+    "optimized_script_median_ms": 2.627,
+    "optimized_script_min_ms": 2.303,
+    "optimized_script_max_ms": 4.47,
     "baseline_estimated_input_tokens": 3411,
     "optimized_estimated_input_tokens": 1805,
     "estimated_token_reduction_percent": 47.1,
@@ -288,7 +288,7 @@
       ]
     },
     "metrics": {
-      "elapsed_ms": 2.582,
+      "elapsed_ms": 2.112,
       "input_chars": 9803,
       "output_chars": 0,
       "estimated_output_tokens": 0
